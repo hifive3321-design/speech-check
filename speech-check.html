@@ -175,8 +175,9 @@ td.n{text-align:right;}
       <div id="noVoice" class="warn hidden"></div>
       <ul class="steps">
         <li><b>1</b><span>Find a quiet spot and allow microphone access when your browser asks.</span></li>
-        <li><b>2</b><span>Tap <strong>Listen</strong> to hear the phrase, then say it out loud at your normal speed. Don't rush.</span></li>
-        <li><b>3</b><span>If nothing is heard, tap the mic and try once more, then move on.</span></li>
+        <li><b>2</b><span>If you cannot read the Japanese, tap <strong>Listen</strong> first and hear the phrase. Use it whenever you need it &mdash; it never plays by itself.</span></li>
+        <li><b>3</b><span>Then tap <strong>Speak</strong> and say the phrase at your normal speed. Speak up and hold the phone near your mouth &mdash; a quiet voice is often not heard.</span></li>
+        <li><b>4</b><span>If nothing is heard, tap <strong>Speak</strong> and try once more, then move on.</span></li>
       </ul>
       <label for="nick">The code your teacher gave you</label>
       <input type="text" id="nick" autocomplete="off" placeholder="e.g. A3" maxlength="24">
@@ -218,7 +219,7 @@ td.n{text-align:right;}
         </div>
       </div>
     </div>
-    <p class="note" id="hint">Tap <strong>Listen</strong> to hear it, then <strong>Speak</strong> to say it.</p>
+    <p class="note" id="hint">Tap <strong>Speak</strong> and say the phrase. Tap <strong>Listen</strong> first if you need to hear it.</p>
   </section>
 
   <!-- ===== RESULT ===== -->
@@ -392,8 +393,6 @@ function render(){
   heardText=''; firstMs=0;
   stopSpeaking();
   drawRail();
-  // play the model once so students who cannot read the script still hear it
-  if(ttsUnlocked) setTimeout(()=>{ if(!listening) speakPhrase(0.85); }, 260);
 }
 
 function setVerdict(v){
@@ -548,7 +547,7 @@ async function startListening(){
     }else if(c==='network'){
       micProblem('Speech recognition needs an internet connection.', c);
     }else{
-      micProblem('Nothing was heard. Tap Speak and try again.', c);
+      micProblem('Nothing was heard. Speak a little louder and try again.', c);
     }
   };
   recog.onend=()=>stopUI();
@@ -575,7 +574,7 @@ $('next').onclick=()=>{
   stopListening();
   stopSpeaking();
   results[idx]={i:idx, heard:heardText, v:judge(heardText,PHRASES[idx]), ms:firstMs};
-  if(idx<PHRASES.length-1){ idx++; render(); $('hint').innerHTML='Tap <strong>Listen</strong> to hear it, then <strong>Speak</strong> to say it.'; }
+  if(idx<PHRASES.length-1){ idx++; render(); $('hint').innerHTML='Tap <strong>Speak</strong> and say the phrase. Tap <strong>Listen</strong> first if you need to hear it.'; }
   else finish();
 };
 $('again').onclick=()=>{ idx=0; results=[]; show('screen-start'); };
