@@ -1,0 +1,693 @@
+<title>Speech Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --paper:#EEF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA;
+  --ink:#141A24; --ink-2:#4B5666; --ink-3:#7C889A;
+  --line:#D9E0E8;
+  --ai:#2E5A8C; --ai-deep:#1B3A5C; --ai-soft:#E4EDF7;
+  --shu:#C4453A; --shu-soft:#FBE8E6;
+  --midori:#3F7A5C; --midori-soft:#E4F0EA;
+  --amber:#B0741F; --amber-soft:#FBEFDC;
+  --shadow:0 1px 2px rgba(20,26,36,.06), 0 8px 24px rgba(20,26,36,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E141C; --surface:#161F2B; --surface-2:#1D2836;
+    --ink:#E7ECF3; --ink-2:#A8B4C4; --ink-3:#7B8798;
+    --line:#2A3646;
+    --ai:#7FAEE0; --ai-deep:#A9CAEC; --ai-soft:#1C2E44;
+    --shu:#E88C83; --shu-soft:#3A2220;
+    --midori:#7FC0A0; --midori-soft:#1B2D25;
+    --amber:#DFAE61; --amber-soft:#33270F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E141C; --surface:#161F2B; --surface-2:#1D2836;
+  --ink:#E7ECF3; --ink-2:#A8B4C4; --ink-3:#7B8798;
+  --line:#2A3646;
+  --ai:#7FAEE0; --ai-deep:#A9CAEC; --ai-soft:#1C2E44;
+  --shu:#E88C83; --shu-soft:#3A2220;
+  --midori:#7FC0A0; --midori-soft:#1B2D25;
+  --amber:#DFAE61; --amber-soft:#33270F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans","Zen Kaku Gothic New",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.jp{font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+
+.wrap{max-width:560px; margin:0 auto; padding:20px 18px 40px;}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);}
+
+/* ---- header ---- */
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:16px;}
+.brand{font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ai);}
+.count{font-size:13px; color:var(--ink-3);}
+
+/* ---- progress rail: one tick per phrase ---- */
+.rail{display:flex; gap:3px; margin-bottom:22px;}
+.rail i{flex:1; height:4px; border-radius:2px; background:var(--line); transition:background .2s;}
+.rail i.ok{background:var(--midori)}
+.rail i.near{background:var(--amber)}
+.rail i.bad{background:var(--shu)}
+.rail i.now{background:var(--ai)}
+
+/* ---- phrase ---- */
+.phrase{padding:30px 20px 26px; text-align:center;}
+.kanji{font-size:clamp(28px,7.4vw,40px); font-weight:700; line-height:1.35; text-wrap:balance;}
+.pitchbox{margin:14px 0 6px; display:flex; justify-content:center;}
+.pitchbox svg{max-width:100%; height:auto;}
+.en{color:var(--ink-2); font-size:15px;}
+
+/* ---- heard ---- */
+.heard{margin-top:16px; background:var(--surface-2); border-radius:12px; padding:16px; text-align:center;}
+.heard .lab{font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3); font-weight:600;}
+.heard .val{font-size:clamp(20px,5.4vw,26px); margin-top:6px; min-height:1.4em;}
+.heard .val.empty{color:var(--ink-3)}
+
+.verdict{margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px;
+  height:40px; border-radius:20px; font-weight:600; font-size:15px;}
+.verdict.hide{visibility:hidden}
+.verdict.ok{background:var(--midori-soft); color:var(--midori)}
+.verdict.near{background:var(--amber-soft); color:var(--amber)}
+.verdict.bad{background:var(--shu-soft); color:var(--shu)}
+.timing{margin-top:8px; text-align:center; font-size:13px; color:var(--ink-3);}
+
+/* ---- controls ---- */
+.controls{display:flex; gap:10px; margin-top:18px;}
+button{font:inherit; cursor:pointer; border-radius:14px; border:1px solid transparent; transition:filter .15s, background .15s;}
+button:focus-visible{outline:3px solid var(--ai); outline-offset:2px;}
+button:disabled{opacity:.45; cursor:default}
+.btn-main{flex:2; height:60px; background:var(--ai); color:#fff; font-size:17px; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:9px;}
+.btn-main:hover:not(:disabled){filter:brightness(1.08)}
+.btn-main.rec{background:var(--shu)}
+.btn-side{flex:1; height:60px; background:transparent; color:var(--ink); border-color:var(--line); font-size:15px; font-weight:500;}
+.btn-side:hover:not(:disabled){background:var(--surface-2)}
+.btn-wide{width:100%; height:56px; background:var(--ai); color:#fff; font-size:17px; font-weight:600; margin-top:8px;}
+.btn-ghost{width:100%; height:46px; background:transparent; color:var(--ai); border-color:var(--line); font-size:15px; margin-top:10px;}
+
+.mic{width:20px;height:20px;fill:currentColor;flex:none}
+
+/* ---- listen ---- */
+.listen{display:flex; justify-content:center; gap:8px; margin-top:16px;}
+.listen button{display:inline-flex; align-items:center; gap:7px; height:40px; padding:0 16px;
+  border-radius:20px; background:var(--ai-soft); color:var(--ai); border-color:transparent;
+  font-size:14px; font-weight:600;}
+.listen button:hover:not(:disabled){filter:brightness(.96)}
+.listen button.slow{background:transparent; border-color:var(--line); color:var(--ink-2); font-weight:500;}
+.listen button.playing{background:var(--ai); color:#fff;}
+.spk{width:17px;height:17px;fill:currentColor;flex:none}
+
+/* ---- start / result ---- */
+h1{font-size:27px; line-height:1.25; margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em;}
+.lede{color:var(--ink-2); margin:0 0 20px;}
+.steps{margin:0 0 22px; padding:0; list-style:none; display:flex; flex-direction:column; gap:12px;}
+.steps li{display:flex; gap:12px; align-items:flex-start; font-size:15px; color:var(--ink-2);}
+.steps b{flex:none; width:24px; height:24px; border-radius:50%; background:var(--ai-soft); color:var(--ai);
+  font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;}
+label{display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:6px;}
+input[type=text]{width:100%; height:52px; padding:0 14px; font:inherit; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:12px;}
+input[type=text]:focus{outline:2px solid var(--ai); outline-offset:0; border-color:var(--ai);}
+
+.score{text-align:center; padding:30px 20px 24px;}
+.score .big{font-size:64px; font-weight:600; line-height:1; letter-spacing:-.03em;}
+.score .cap{font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-top:8px;}
+.tally{display:flex; gap:8px; margin:20px 0 0;}
+.tally div{flex:1; padding:12px 8px; border-radius:12px; text-align:center; background:var(--surface-2);}
+.tally span{display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:600;}
+.tally strong{font-size:24px; font-weight:600;}
+
+.review{margin-top:22px; border-top:1px solid var(--line);}
+.row{display:flex; align-items:center; gap:12px; padding:12px 2px; border-bottom:1px solid var(--line);}
+.row .stripe{width:4px; align-self:stretch; border-radius:2px; flex:none;}
+.row .stripe.ok{background:var(--midori)} .row .stripe.near{background:var(--amber)} .row .stripe.bad{background:var(--shu)}
+.row .txt{flex:1; min-width:0;}
+.row .txt .a{font-size:16px; font-weight:500;}
+.row .txt .b{font-size:13px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.row .ms{font-size:13px; color:var(--ink-3);}
+
+.note{font-size:13px; color:var(--ink-3); margin-top:18px;}
+.warn{background:var(--shu-soft); color:var(--shu); border-radius:12px; padding:16px; font-size:15px; margin-bottom:18px;}
+.report{margin-top:16px;}
+.report textarea{width:100%; min-height:132px; padding:12px 14px; font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12.5px; line-height:1.6; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line); border-radius:12px; resize:vertical;}
+.report .lab{font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3); font-weight:600; margin-bottom:6px;}
+.saved{background:var(--midori-soft); color:var(--midori); border-radius:12px; padding:14px 16px; font-size:14px; font-weight:500; margin-top:16px; text-align:center;}
+
+.teacherlink{display:block; text-align:center; margin-top:26px; font-size:13px; color:var(--ink-3); text-decoration:none; border:0; background:none; width:100%; cursor:pointer;}
+.teacherlink:hover{color:var(--ai)}
+
+table{width:100%; border-collapse:collapse; font-size:14px;}
+th{text-align:left; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); padding:8px 6px; border-bottom:1px solid var(--line);}
+td{padding:10px 6px; border-bottom:1px solid var(--line);}
+td.n{text-align:right;}
+.hidden{display:none !important}
+@media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand">Speech Check</div>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="rail" id="rail"></div>
+
+  <!-- ===== START ===== -->
+  <section id="screen-start">
+    <div class="card" style="padding:26px 22px;">
+      <h1>Can the phone hear your Japanese?</h1>
+      <p class="lede">Twenty short phrases. Say each one out loud and we will show you what the speech recogniser heard. About five minutes.</p>
+      <div id="unsupported" class="warn hidden"></div>
+      <div id="noVoice" class="warn hidden"></div>
+      <ul class="steps">
+        <li><b>1</b><span>Find a quiet spot and allow microphone access when your browser asks.</span></li>
+        <li><b>2</b><span>Tap <strong>Listen</strong> to hear the phrase, then say it out loud at your normal speed. Don't rush.</span></li>
+        <li><b>3</b><span>If nothing is heard, tap the mic and try once more, then move on.</span></li>
+      </ul>
+      <label for="nick">The code your teacher gave you</label>
+      <input type="text" id="nick" autocomplete="off" placeholder="e.g. A3" maxlength="24">
+      <button class="btn-wide" id="go">Start</button>
+      <button class="teacherlink hidden" id="toTeacher">Teacher view</button>
+    </div>
+    <p class="note" id="diag" style="font-size:11px;opacity:.75"></p>
+    <p class="note">Works in Chrome, Safari, Edge and Samsung Internet. Firefox cannot do speech recognition. Your recording is never stored &mdash; only the text the recogniser produced.</p>
+  </section>
+
+  <!-- ===== PRACTICE ===== -->
+  <section id="screen-run" class="hidden">
+    <div class="card">
+      <div class="phrase">
+        <div class="kanji jp" id="kanji"></div>
+        <div class="pitchbox" id="pitch"></div>
+        <div class="en" id="en"></div>
+        <div class="listen" id="listenRow">
+          <button id="listen" type="button">
+            <svg class="spk" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Zm-2.5-8.2v2.06A6.5 6.5 0 0 1 14 20.14v2.06A8.5 8.5 0 0 0 14 3.8Z"/></svg>
+            <span id="listenLabel">Listen</span>
+          </button>
+          <button id="listenSlow" class="slow" type="button">Slow</button>
+        </div>
+      </div>
+      <div style="padding:0 18px 20px;">
+        <div class="heard">
+          <div class="lab">What we heard</div>
+          <div class="val jp empty" id="heard">—</div>
+        </div>
+        <div class="verdict hide" id="verdict"></div>
+        <div class="timing" id="timing"></div>
+        <div class="controls">
+          <button class="btn-main" id="mic">
+            <svg class="mic" viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V22h2v-3.1A7 7 0 0 0 19 12Z"/></svg>
+            <span id="micLabel">Speak</span>
+          </button>
+          <button class="btn-side" id="next">Next</button>
+        </div>
+      </div>
+    </div>
+    <p class="note" id="hint">Tap <strong>Listen</strong> to hear it, then <strong>Speak</strong> to say it.</p>
+  </section>
+
+  <!-- ===== RESULT ===== -->
+  <section id="screen-done" class="hidden">
+    <div class="card">
+      <div class="score">
+        <div class="big mono" id="rate">—</div>
+        <div class="cap">Recognised</div>
+        <div class="tally">
+          <div><span>Exact</span><strong class="mono" id="tExact">0</strong></div>
+          <div><span>Close</span><strong class="mono" id="tClose">0</strong></div>
+          <div><span>Missed</span><strong class="mono" id="tMiss">0</strong></div>
+        </div>
+      </div>
+      <div style="padding:0 18px 20px;">
+        <div class="review" id="review"></div>
+        <div id="saveState"></div>
+        <button class="btn-ghost" id="again">Do it again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TEACHER ===== -->
+  <section id="screen-teacher" class="hidden">
+    <div class="card" style="padding:22px 18px;">
+      <h1 style="font-size:22px">Results</h1>
+      <div id="teacherBody"><p class="lede">Loading…</p></div>
+      <button class="btn-ghost" id="backHome">Back</button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   Phrases — same set as the Android app.
+   pitch: H/L per mora. units: number of phrase-units (文節).
+   ============================================================ */
+const PHRASES = [
+ {k:'学生です',       r:'がくせいです',        e:"I'm a student.",              p:'LHHHHH',        u:1},
+ {k:'先生です',       r:'せんせいです',        e:"I'm a teacher.",              p:'LHHLLL',        u:1},
+ {k:'元気です',       r:'げんきです',          e:"I'm fine.",                   p:'HLLLL',         u:1},
+ {k:'日本人です',     r:'にほんじんです',      e:"I'm Japanese.",               p:'LHHHLLL',       u:1},
+ {k:'会社員です',     r:'かいしゃいんです',    e:"I'm an office worker.",       p:'LHHLLLL',       u:1},
+ {k:'私は学生です',   r:'わたしはがくせいです',e:"I'm a student.",              p:'LHHHLHHHHH',    u:2},
+ {k:'今日は休みです', r:'きょうはやすみです',  e:"Today is a day off.",         p:'HLLLHHLL',      u:2},
+ {k:'明日は月曜日です',r:'あしたはげつようびです',e:"Tomorrow is Monday.",      p:'LHHLLHHLLLL',   u:2},
+ {k:'彼は先生です',   r:'かれはせんせいです',  e:"He is a teacher.",            p:'HLLLHHLLL',     u:2},
+ {k:'名前は田中です', r:'なまえはたなかです',  e:"My name is Tanaka.",          p:'LHHHLHHHH',     u:2},
+ {k:'私はアメリカ人です',r:'わたしはあめりかじんです',e:"I'm American.",        p:'LHHHLHHHLLLL',  u:2},
+ {k:'私は大学生です', r:'わたしはだいがくせいです',e:"I'm a university student.",p:'LHHHLHHHHLLL', u:2},
+ {k:'今日は水曜日です',r:'きょうはすいようびです',e:"Today is Wednesday.",      p:'HLLLHHLLLL',    u:2},
+ {k:'明日は誕生日です',r:'あしたはたんじょうびです',e:"Tomorrow is my birthday.",p:'LHHLLHHLLLL',  u:2},
+ {k:'私の本です',     r:'わたしのほんです',    e:"It's my book.",               p:'LHHHHLLL',      u:2},
+ {k:'日本の車です',   r:'にほんのくるまです',  e:"It's a Japanese car.",        p:'LHLLLHHHH',     u:2},
+ {k:'先生の傘です',   r:'せんせいのかさです',  e:"It's the teacher's umbrella.",p:'LHHLLHLLL',     u:2},
+ {k:'私の名前は田中です',r:'わたしのなまえはたなかです',e:"My name is Tanaka.", p:'LHHHLHHHLHHHH',u:3},
+ {k:'彼は日本語の先生です',r:'かれはにほんごのせんせいです',e:"He is a Japanese teacher.",p:'HLLLHHHHLHHLLL',u:3},
+ {k:'私の趣味は音楽です',r:'わたしのしゅみはおんがくです',e:"My hobby is music.",p:'LHHHHLLHLLLLL',u:3},
+];
+
+/* ---- mora splitting ---- */
+const SMALL='ゃゅょぁぃぅぇぉャュョァィゥェォ';
+function toMora(s){const o=[];for(const c of s){if(o.length&&SMALL.includes(c))o[o.length-1]+=c;else o.push(c);}return o;}
+
+/* ---- judging: same rules as the app ---- */
+function kataToHira(s){let o='';for(const c of s){const n=c.codePointAt(0);o+=(n>=0x30A1&&n<=0x30F6)?String.fromCodePoint(n-0x60):c;}return o;}
+function normalise(t){
+  return kataToHira(t).replace(/[\s　、。，．!?！？・ー]/g,'')
+    .replace(/は/g,'わ').replace(/へ/g,'え').replace(/を/g,'お');
+}
+function editDistance(a,b){
+  if(a.length<b.length){const t=a;a=b;b=t;}
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];
+    for(let j=1;j<=b.length;j++){
+      cur.push(Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)));
+    }
+    prev=cur;
+  }
+  return prev[b.length];
+}
+/* recognition returns kanji, so compare against BOTH kanji and kana */
+function judge(heard,ph){
+  if(!heard.trim())return 'none';
+  const h=normalise(heard);
+  let best=9999;
+  for(const c of [ph.k,ph.r]){
+    const n=normalise(c);
+    if(h===n)return 'ok';
+    best=Math.min(best,editDistance(h,n));
+  }
+  return best<=2?'near':'bad';
+}
+
+/* ---- pitch line as SVG ---- */
+function pitchSVG(kana,pitch){
+  const mora=toMora(kana);
+  if(!pitch||pitch.length!==mora.length)
+    return '<div style="color:var(--ink-3);font-size:18px" class="jp">'+kana+'</div>';
+  const w=Math.min(26, Math.max(15, Math.floor((Math.min(window.innerWidth,560)-70)/mora.length)));
+  const H=24, FS=Math.max(12,Math.round(w*0.72));
+  const width=w*mora.length, height=H+FS+8;
+  let d='';
+  const y=i=>pitch[i]==='H'?5:16;
+  for(let i=0;i<mora.length;i++){
+    const x0=w*i+2, x1=w*(i+1)-2;
+    d+=`M${x0} ${y(i)} L${x1} ${y(i)} `;
+    if(i<mora.length-1) d+=`L${x1+4} ${y(i+1)} `;
+  }
+  let txt='';
+  for(let i=0;i<mora.length;i++){
+    txt+=`<text x="${w*i+w/2}" y="${H+FS-2}" text-anchor="middle" font-size="${FS}" fill="var(--ink-2)" font-family="Zen Kaku Gothic New, sans-serif">${mora[i]}</text>`;
+  }
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="pitch pattern">
+    <path d="${d}" fill="none" stroke="var(--ai)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>${txt}</svg>`;
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+let idx=0, results=[], nick='', recog=null, listening=false, t0=0, firstMs=0, heardText='';
+
+const $=id=>document.getElementById(id);
+const show=id=>{['screen-start','screen-run','screen-done','screen-teacher'].forEach(s=>$(s).classList.toggle('hidden',s!==id));};
+
+/* ---- browser support ---- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let inFrame=false; try{ inFrame = window.self !== window.top; }catch(e){ inFrame=true; }
+
+$('diag').textContent =
+  'recognition: ' + (SR?'yes':'no') +
+  ' · voice: ' + (window.speechSynthesis?'yes':'no') +
+  ' · mic api: ' + ((navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)?'yes':'no') +
+  ' · secure: ' + (window.isSecureContext?'yes':'no') +
+  ' · embedded: ' + (inFrame?'yes':'no');
+
+if(inFrame){
+  const w=$('unsupported');
+  w.innerHTML='This page is embedded, so the browser may refuse the microphone. If recording does not start, open the link in its own browser tab.';
+  w.classList.remove('hidden');
+}
+if(!SR){
+  const w=$('unsupported');
+  w.innerHTML='This browser cannot do speech recognition. Please open this page in Chrome, Safari, Edge or Samsung Internet.';
+  w.classList.remove('hidden');
+  $('go').disabled=true;
+}
+
+/* ---- rail ---- */
+function drawRail(){
+  $('rail').innerHTML = PHRASES.map((_,i)=>{
+    const r=results[i];
+    let c = i===idx ? 'now' : '';
+    if(r) c = r.v==='ok'?'ok':r.v==='near'?'near':'bad';
+    return `<i class="${c}"></i>`;
+  }).join('');
+  $('count').textContent = `${idx+1} / ${PHRASES.length}`;
+}
+
+function render(){
+  const p=PHRASES[idx];
+  $('kanji').textContent=p.k;
+  $('pitch').innerHTML=pitchSVG(p.r,p.p);
+  $('en').textContent=p.e;
+  $('heard').textContent='—';
+  $('heard').classList.add('empty');
+  $('verdict').className='verdict hide';
+  $('timing').textContent='';
+  $('next').textContent = idx===PHRASES.length-1 ? 'Finish' : 'Next';
+  heardText=''; firstMs=0;
+  stopSpeaking();
+  drawRail();
+  // play the model once so students who cannot read the script still hear it
+  if(ttsUnlocked) setTimeout(()=>{ if(!listening) speakPhrase(0.85); }, 260);
+}
+
+function setVerdict(v){
+  const el=$('verdict');
+  if(v==='none'){el.className='verdict hide';return;}
+  const map={ok:['ok','Exact match'],near:['near','Close'],bad:['bad','Not recognised']};
+  el.className='verdict '+map[v][0];
+  el.textContent=map[v][1];
+}
+
+/* ---- model audio (speech synthesis) ---- */
+const SS = window.speechSynthesis;
+let jaVoice=null, voicesChecked=false, ttsUnlocked=false, speaking=false;
+
+function pickVoice(){
+  if(!SS) return;
+  const vs = SS.getVoices();
+  if(!vs.length) return;                 // not ready yet
+  jaVoice = vs.find(v=>v.lang==='ja-JP')
+         || vs.find(v=>(v.lang||'').replace('_','-').toLowerCase().startsWith('ja'))
+         || null;
+  voicesChecked = true;
+  if(!jaVoice){
+    const w=$('noVoice');
+    w.textContent='No Japanese voice is installed on this device, so the Listen button may be silent. You can still do the check by reading the phrase.';
+    w.classList.remove('hidden');
+  }
+}
+if(SS){
+  pickVoice();
+  SS.addEventListener('voiceschanged', pickVoice);
+}else{
+  $('listenRow').classList.add('hidden');
+}
+
+function stopSpeaking(){
+  if(!SS) return;
+  try{ SS.cancel(); }catch(e){}
+  speaking=false;
+  $('listen').classList.remove('playing');
+  $('listenLabel').textContent='Listen';
+}
+
+function speakPhrase(rate){
+  if(!SS) return;
+  if(listening) stopListening();         // mic and speaker must not overlap
+  stopSpeaking();
+  const p=PHRASES[idx];
+  const u=new SpeechSynthesisUtterance(p.k);
+  u.lang='ja-JP';
+  if(jaVoice) u.voice=jaVoice;
+  u.rate=rate;
+  u.pitch=1;
+  u.onstart=()=>{ speaking=true; $('listen').classList.add('playing'); $('listenLabel').textContent='Playing'; };
+  u.onend=stopSpeaking;
+  u.onerror=stopSpeaking;
+  try{ SS.speak(u); }catch(e){ stopSpeaking(); }
+}
+
+/* iOS and some Android browsers only allow speech that starts from a tap.
+   Speaking one silent utterance inside the Start tap unlocks it for the rest. */
+function unlockTTS(){
+  if(!SS||ttsUnlocked) return;
+  try{
+    const u=new SpeechSynthesisUtterance(' ');
+    u.volume=0; u.lang='ja-JP';
+    SS.speak(u);
+    ttsUnlocked=true;
+  }catch(e){}
+  if(!voicesChecked) pickVoice();
+}
+
+$('listen').onclick=()=>{ ttsUnlocked=true; speakPhrase(0.85); };
+$('listenSlow').onclick=()=>{ ttsUnlocked=true; speakPhrase(0.6); };
+
+/* ---- recognition ---- */
+let micReady=false;
+
+function micProblem(msg, code){
+  $('hint').innerHTML = msg + (code? ` <span style="opacity:.6">(${code})</span>` : '');
+  stopUI();
+}
+
+/* Ask for the microphone explicitly. Speech recognition on its own does not
+   always raise the permission prompt, especially inside an embedded page. */
+async function ensureMic(){
+  if(micReady) return true;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    micReady = true;             // old browser: let recognition try by itself
+    return true;
+  }
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({audio:true});
+    st.getTracks().forEach(t=>t.stop());
+    micReady = true;
+    return true;
+  }catch(e){
+    const n = e && e.name || 'error';
+    if(n==='NotAllowedError' || n==='SecurityError'){
+      micProblem(inFrame
+        ? 'This page cannot use the microphone here. Open the link in its own browser tab and try again.'
+        : 'Microphone blocked. Tap the lock icon in the address bar, allow the microphone, then reload.', n);
+    }else if(n==='NotFoundError' || n==='DevicesNotFoundError'){
+      micProblem('No microphone was found on this device.', n);
+    }else{
+      micProblem('The microphone could not be opened.', n);
+    }
+    return false;
+  }
+}
+
+async function startListening(){
+  if(!SR||listening)return;
+  stopSpeaking();
+  $('micLabel').textContent='…';
+  if(!await ensureMic()){ return; }
+  recog=new SR();
+  recog.lang='ja-JP';
+  recog.interimResults=true;
+  recog.continuous=false;
+  recog.maxAlternatives=1;
+
+  t0=performance.now(); firstMs=0; heardText='';
+  listening=true;
+  $('mic').classList.add('rec');
+  $('micLabel').textContent='Listening…';
+  $('hint').textContent='Say it now.';
+
+  recog.onresult=e=>{
+    let txt='';
+    for(let i=0;i<e.results.length;i++) txt+=e.results[i][0].transcript;
+    if(txt.trim()){
+      if(!firstMs) firstMs=Math.round(performance.now()-t0);
+      heardText=txt;
+      $('heard').textContent=txt;
+      $('heard').classList.remove('empty');
+      setVerdict(judge(txt,PHRASES[idx]));
+      $('timing').textContent=`Time to speak ${(firstMs/1000).toFixed(1)}s`;
+    }
+  };
+  recog.onerror=e=>{
+    stopUI();
+    const c=e.error||'error';
+    if(c==='not-allowed'){
+      micProblem(inFrame
+        ? 'This page is not allowed to use the microphone here. Open the link in its own browser tab.'
+        : 'Microphone blocked. Allow it in your browser settings, then reload.', c);
+    }else if(c==='service-not-allowed'){
+      micProblem('The speech service is not available on this device or browser. Try Chrome.', c);
+    }else if(c==='audio-capture'){
+      micProblem('The microphone could not be read. Check that nothing else is using it.', c);
+    }else if(c==='network'){
+      micProblem('Speech recognition needs an internet connection.', c);
+    }else{
+      micProblem('Nothing was heard. Tap Speak and try again.', c);
+    }
+  };
+  recog.onend=()=>stopUI();
+  try{recog.start();}catch(err){stopUI();}
+}
+function stopUI(){
+  listening=false;
+  $('mic').classList.remove('rec');
+  $('micLabel').textContent = heardText? 'Try again' : 'Speak';
+  if(heardText) $('hint').textContent='Tap Next when you are ready.';
+}
+function stopListening(){ if(recog){try{recog.stop();}catch(e){}} stopUI(); }
+
+/* ---- flow ---- */
+$('go').onclick=()=>{
+  unlockTTS();
+  nick=($('nick').value||'').trim().slice(0,24) || '(no code)';
+  idx=0; results=[];
+  show('screen-run'); render();
+};
+$('mic').onclick=()=>{ if(listening){ stopListening(); } else { startListening(); } };
+
+$('next').onclick=()=>{
+  stopListening();
+  stopSpeaking();
+  results[idx]={i:idx, heard:heardText, v:judge(heardText,PHRASES[idx]), ms:firstMs};
+  if(idx<PHRASES.length-1){ idx++; render(); $('hint').innerHTML='Tap <strong>Listen</strong> to hear it, then <strong>Speak</strong> to say it.'; }
+  else finish();
+};
+$('again').onclick=()=>{ idx=0; results=[]; show('screen-start'); };
+
+function finish(){
+  const ok=results.filter(r=>r.v==='ok').length;
+  const near=results.filter(r=>r.v==='near').length;
+  const bad=results.length-ok-near;
+  const rate=Math.round((ok+near)/results.length*100);
+  $('rate').textContent=rate+'%';
+  $('tExact').textContent=ok; $('tClose').textContent=near; $('tMiss').textContent=bad;
+  $('review').innerHTML=results.map(r=>{
+    const p=PHRASES[r.i];
+    const cls=r.v==='ok'?'ok':r.v==='near'?'near':'bad';
+    return `<div class="row"><div class="stripe ${cls}"></div>
+      <div class="txt"><div class="a jp">${p.k}</div>
+      <div class="b jp">${r.heard? 'heard: '+r.heard : 'nothing heard'}</div></div>
+      <div class="ms mono">${r.ms? (r.ms/1000).toFixed(1)+'s':'—'}</div></div>`;
+  }).join('');
+  drawRail(); $('count').textContent='Done';
+  show('screen-done');
+  save(rate,ok,near,bad);
+}
+
+/* ---- save results for the teacher ---- */
+function reportText(rate,ok,near,bad){
+  const missed=results.filter(r=>r.v==='bad').map(r=>(r.i+1)+' '+PHRASES[r.i].k);
+  const close =results.filter(r=>r.v==='near').map(r=>(r.i+1)+' '+PHRASES[r.i].k);
+  const times =results.filter(r=>r.ms).map(r=>r.ms);
+  const avg = times.length? (times.reduce((a,b)=>a+b,0)/times.length/1000).toFixed(1)+'s' : '-';
+  const ua=navigator.userAgent;
+  const dev=[/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Mac/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':'?',
+             /Edg\//.test(ua)?'Edge':/SamsungBrowser/.test(ua)?'Samsung':/CriOS|Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':'?'].join(' ');
+  return ['SPEECH CHECK  '+nick,
+    'Recognised '+rate+'%   exact '+ok+' / close '+near+' / missed '+bad,
+    'Avg time to speak '+avg,
+    'Missed: '+(missed.length? missed.join(', ') : 'none'),
+    'Close:  '+(close.length? close.join(', ') : 'none'),
+    'Device: '+dev].join('\n');
+}
+
+function showReport(rate,ok,near,bad,note){
+  const box=$('saveState');
+  const txt=reportText(rate,ok,near,bad);
+  box.innerHTML='<div class="report"><div class="lab">'+note+'</div>'
+    + '<textarea id="reportBox" readonly></textarea>'
+    + '<button class="btn-ghost" id="copyBtn">Copy this and send it to your teacher</button></div>';
+  $('reportBox').value=txt;
+  $('copyBtn').onclick=async()=>{
+    const el=$('reportBox');
+    el.focus(); el.select(); el.setSelectionRange(0, txt.length);
+    let done=false;
+    try{ await navigator.clipboard.writeText(txt); done=true; }
+    catch(e){ try{ done=document.execCommand('copy'); }catch(e2){} }
+    $('copyBtn').textContent = done ? 'Copied — now paste it in the chat' : 'Select the text above and copy it';
+  };
+}
+
+async function save(rate,ok,near,bad){
+  const box=$('saveState');
+  let db=null;
+  try{ db = (typeof claude!=='undefined' && claude.use) ? await claude.use('db') : null; }catch(e){ db=null; }
+  if(!db){ showReport(rate,ok,near,bad,'Your result'); return; }
+  try{
+    const id='r_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    await db.doc('results/'+id).set({
+      name:nick, at:Date.now(), rate:rate, exact:ok, close:near, missed:bad,
+      ua:navigator.userAgent.slice(0,120),
+      detail:results.map(r=>({i:r.i, heard:r.heard, v:r.v, ms:r.ms}))
+    });
+    box.innerHTML='<div class="saved">Sent to your teacher.</div>';
+  }catch(err){
+    showReport(rate,ok,near,bad,'Could not send automatically — your result');
+  }
+}
+
+/* ---- teacher view ---- */
+$('toTeacher').onclick=async()=>{
+  show('screen-teacher');
+  const body=$('teacherBody');
+  let db=null;
+  try{ db = (typeof claude!=='undefined' && claude.use) ? await claude.use('db') : null; }catch(e){ db=null; }
+  if(!db){ body.innerHTML='<p class="lede">Automatic collection is not available on this address. Each student gets a result block to copy and paste into the lesson chat.</p>'; return; }
+  try{
+    const snap=await db.collection('results').orderBy('at','desc').limit(200).get();
+    const docs=(snap.docs||[]).map(d=>d.data?d.data():d);
+    if(!docs.length){ body.innerHTML='<p class="lede">No results yet.</p>'; return; }
+    const avg=Math.round(docs.reduce((s,d)=>s+(d.rate||0),0)/docs.length);
+    const low=docs.filter(d=>(d.rate||0)<60).length;
+    body.innerHTML=`
+      <div class="tally" style="margin-bottom:18px">
+        <div><span>Students</span><strong class="mono">${docs.length}</strong></div>
+        <div><span>Average</span><strong class="mono">${avg}%</strong></div>
+        <div><span>Under 60%</span><strong class="mono">${low}</strong></div>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <tr><th>Code</th><th class="n">Rate</th><th class="n">Exact</th><th class="n">Close</th><th class="n">Missed</th><th>When</th></tr>
+        ${docs.map(d=>`<tr><td>${(d.name||'—')}</td><td class="n mono">${d.rate}%</td>
+        <td class="n mono">${d.exact}</td><td class="n mono">${d.close}</td><td class="n mono">${d.missed}</td>
+        <td>${new Date(d.at).toLocaleDateString()}</td></tr>`).join('')}
+      </table></div>`;
+  }catch(err){
+    body.innerHTML='<p class="lede">Results are only visible to the teacher.</p>';
+  }
+};
+$('backHome').onclick=()=>show('screen-start');
+
+/* 先生用の一覧は、URL の末尾に #teacher を付けたときだけ表示する。
+   結果は同じ場所に保存されるため、生徒が偶然たどり着かないようにしている。 */
+if(location.hash === '#teacher'){
+  $('toTeacher').classList.remove('hidden');
+}
+
+drawRail();
+</script>
